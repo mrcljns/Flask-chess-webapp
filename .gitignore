@@ -5,3 +5,5 @@ data/GM_stats.csv
 data/ratings.txt
 data/rating_ver2.db
 P1.ipynb
+data/chess_openings.csv
+data/query1.sql
