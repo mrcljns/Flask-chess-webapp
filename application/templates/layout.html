@@ -17,44 +17,51 @@
         integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN" 
         crossorigin="anonymous"></script>
 
-        <nav class="navbar navbar-expand-lg bg-body-tertiary bg-dark" data-bs-theme="dark">
+        <nav class="navbar navbar-expand-md bg-body-tertiary bg-dark" data-bs-theme="dark">
             <div class="container-fluid">
-              <a class="navbar-brand" href="#">ChesStats</a>
-              <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+              <a class="navbar-brand" href="/">ChesStats</a>
+              <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" \
+              aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
               </button>
-              <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                  <li class="nav-item">
-                    <a class="nav-link active" aria-current="page" href="#">Home</a>
-                  </li>
-                  <li class="nav-item">
-                    <a class="nav-link" href="dashboard">Dashboard</a>
-                  </li>
-                </ul>
+              <div class="collapse navbar-collapse" id="navbarToggle">
+                <div class="navbar-nav mr-auto">
+                  <a class="nav-item nav-link" href="{{ url_for('index') }}">Home</a>
+                </div>
+                {% if current_user.is_authenticated %}
+                  <div class="navbar-nav">
+                    <a class="nav-item nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
+                    <a class="nav-item nav-link" href="{{ url_for('add_game') }}">Add game</a>
+                  </div>
+                  <div class="navbar-nav ms-auto">
+                    <a class="nav-item nav-link" href="{{ url_for('logout') }}">Logout</a>
+                  </div>
+                {% else %}
+                  <div class="navbar-nav ms-auto">
+                    <a class="nav-item nav-link" href="{{ url_for('login') }}">Login</a>
+                    <a class="nav-item nav-link" href="{{ url_for('register') }}">Register</a>
+                  </div>
+                {% endif %}
               </div>
             </div>
           </nav>
         
           <main>
             <div class="container">
-              <div class="row">
-                <form action="/dashboard" method="POST">
-                  <label for="selected-gm">Select grandmaster</label>
-                  <select name="selected-gm" class="form-select" aria-label="Default select example" onchange="this.form.submit();">
-                    {% for gm in names %}
-                      <option value="{{gm}}" {% if selected_gm == gm %} selected {% endif %}>{{gm}}</option>
-                    {% endfor %}
-                  </select>
-                </form>
-              </div>
-            </div>
-            <div class="container">
                 <div class="row">
                     <div class=".col-md-12 col-sm-12 col-xm-12">
                         <div class="ml-auto mr-auto">
-                            {% block content %}
-                            {% endblock %}
+                          {% with messages = get_flashed_messages(with_categories=true) %}
+                            {% if messages %}
+                              {% for category, message in messages %}
+                                <div class="alert alert-{{ category }}">
+                                  {{ message }}
+                                </div>
+                              {% endfor %}
+                            {% endif %}
+                          {% endwith %}
+                          {% block content %}
+                          {% endblock %}
                         </div>
                     </div>
                 </div>
