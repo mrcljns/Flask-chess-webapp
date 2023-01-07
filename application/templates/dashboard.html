@@ -1,0 +1,27 @@
+{% extends "layout.html" %}
+{% block content %}
+<form action="/dashboard" method="POST">
+<label for="selected-gm">Select grandmaster</label>
+<select name="selected-gm" class="form-select" aria-label="Default select example" onchange="this.form.submit();">
+    {% for gm in names %}
+    <option value="{{gm}}" {% if selected_gm == gm %} selected {% endif %}>{{gm}}</option>
+    {% endfor %}
+</select>
+<input type="submit" name="piece-color" value="White" onchange="this.form.submit();">
+<input type="submit" name="piece-color" value="Black" onchange="this.form.submit();">
+</form>
+
+<div class="row p-4">
+    <div class="card m-auto" style="width: 90%;">
+        <div class="card-body">
+            <div id="chart1"></div>
+        </div>
+    </div>
+</div>
+
+<!-- plotly CDN -->
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script>
+    Plotly.plot("chart1", {{ graphlJSON | safe }}, {});
+</script>
+{% endblock content %}
