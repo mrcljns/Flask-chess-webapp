@@ -12,9 +12,12 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(20), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
+    year_of_birth = db.Column(db.Integer, nullable=False)
+    elo = db.Column(db.Integer, nullable=False)
+    title = db.Column(db.String(10), nullable=False)
 
     def __repr__(self):
-        return f"User('{self.username}', '{self.email}')"
+        return f"User('{self.username}', '{self.email}', '{self.year_of_birth}', '{self.elo}', '{self.title}')"
 
 
 class Game(db.Model, UserMixin):
