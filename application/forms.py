@@ -46,7 +46,7 @@ class LoginForm(FlaskForm):
 class GameForm(FlaskForm):
     piece_color = SelectField(u'Piece color', choices=[('white', 'White'), ('black', 'Black')], validators=[DataRequired()])
     result = SelectField(u'Result', choices=[('won', 'Won'), ('draw', 'Draw'), ('lost', 'Lost')], validators=[DataRequired()])
-    moves = StringField('Chess.com Game ID', validators=[DataRequired()])
+    moves = StringField('Moves', validators=[DataRequired()])
     add = SubmitField('Add')
 
 class UpdateAccountForm(FlaskForm):
