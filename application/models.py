@@ -17,7 +17,7 @@ class User(db.Model, UserMixin):
     title = db.Column(db.String(10), nullable=False)
 
     def __repr__(self):
-        return f"User('{self.username}', '{self.email}')"
+        return f"User('{self.username}', '{self.email}', '{self.year_of_birth}', '{self.elo}', '{self.title}')"
 
 
 class Game(db.Model, UserMixin):
