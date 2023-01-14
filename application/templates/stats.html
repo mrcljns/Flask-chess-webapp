@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+{% block content %}
+
+
+<div class="content-section">
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        <fieldset class="form-group">
+            <legend class="border-bottom mb-4">Compare two chess federations</legend>
+            <div class="form-group">
+                {{ form.country1.label(class="form-control-label") }}
+
+                {% if form.country1.errors %}
+                    {{ form.country1(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.country1.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ form.country1(class="form-control form-control-lg") }}
+                {% endif %}
+            </div>
+            <div class="form-group">
+                {{ form.country2.label(class="form-control-label") }}
+                {% if form.country2.errors %}
+                    {{ form.country2(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.country2.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ form.country2(class="form-control form-control-lg") }}
+                {% endif %}
+            </div>
+           
+        </fieldset>
+        <div class="form-group">
+            {{ form.submit(class="btn btn-outline-info") }}
+        </div>
+    </form>
+</div>
+
+
+
+
+
+<!--<select name="country1" id="country1">
+    {% for country1 in countries1 %}
+    <option value="{{ country1.0 }}">{{ country1.1 }}</option>
+    {% endfor %}
+</select>
+
+<label for="country2">Choose a country:</label>
+
+<select name="country2" id="country2">
+    {% for country2 in countries2 %}
+    <option value="{{ country2.0 }}">{{ country2.1 }}</option>
+    {% endfor %}
+</select>
+-->
+{% if best1 %}
+{{ best1.0.0 }} {{ best1.0.1 }} <br/>
+{{ best2.0.0 }} {{ best2.0.1 }} <br/>
+{% else %}
+Input countries and press the buttom
+{% endif %}
+
+{% endblock content %} 

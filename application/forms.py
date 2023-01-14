@@ -81,8 +81,17 @@ class UpdateAccountForm(FlaskForm):
     
     def validate_elo(self, title):
         if title.data != current_user.title:
+            pass
 
 class PlayerForm(FlaskForm):
     player = StringField('Nickname',
                     validators=[DataRequired(), Length(min=3, max=50)])
     submit = SubmitField('Search')
+
+class SelectCountry(FlaskForm):
+    country1 = StringField('First Country',
+                    validators=[DataRequired(), Length(min=3, max=100)])
+    country2 = StringField('Second Country',
+                    validators=[DataRequired(), Length(min=3, max=100)])
+    submit = SubmitField('Compare Selected Countries')
+

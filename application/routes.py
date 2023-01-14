@@ -1,6 +1,6 @@
 from application import app, db, bcrypt
 from flask import render_template, request, url_for, flash, redirect
-from application.forms import RegistrationForm, LoginForm, GameForm, UpdateAccountForm, PlayerForm
+from application.forms import RegistrationForm, LoginForm, GameForm, UpdateAccountForm, PlayerForm, SelectCountry
 from flask_login import login_user, current_user, logout_user, login_required
 from application.models import User, Game
 import pandas as pd
@@ -144,25 +144,6 @@ def test():
 
     return render_template("test.html", pgn_list=pgn_list, length=len(pgn_list))
 
- 
-@app.route("/account", methods=['GET', 'POST'])
-@login_required
-def account():
-    form = UpdateAccountForm()
-    if form.validate_on_submit():
-        current_user.username = form.username.data
-        current_user.email = form.email.data
-        current_user.elo = form.elo.data
-        current_user.title = form.title.data
-        db.session.commit()
-        flash('Your account has been updated!', 'success')
-        return redirect(url_for('account'))
-    elif request.method == 'GET':
-        form.username.data = current_user.username
-        form.email.data = current_user.email
-        form.elo.data = current_user.elo
-        form.title.data = current_user.title
-    return render_template('account.html', title='Account', form=form)
 
 @app.route("/board", methods=['GET', 'POST'])
 @login_required
@@ -175,3 +156,25 @@ def board():
     cur = con.cursor()
     games = cur.execute(f'SELECT * FROM games WHERE To_show is not null AND (upper(White) like "{player}%" or  upper(Black) like "{player}%") LIMIT 20')
     return render_template('board.html', title='Chessboard', form=form, player=player, games=games)
+
+@app.route("/stats", methods=['GET', 'POST'])
+@login_required
+def stats():
+    con = sqlite3.connect("/Users/polaparol/Documents/DS/Python/Flask-chess-webapp-main/instance/rating.db")
+    cur = con.cursor()
+    form = SelectCountry()
+    country1 = ''
+    country2 = ''
+    best1 = ''
+    best2 = ''
+    if form.validate_on_submit():
+        country1 = form.country1.data.upper()
+        country2 = form.country2.data.upper()
+        best1 = list(cur.execute(f"SELECT name, standard_rating FROM player WHERE fed = '{country1}'  ORDER BY standard_rating DESC"))
+        best2 = list(cur.execute(f"SELECT name, standard_rating FROM player WHERE fed = '{country2}'  ORDER BY standard_rating DESC"))
+
+
+    countries1 = list(cur.execute(f'SELECT code, name FROM federation ORDER BY name'))
+    countries2 = list(cur.execute(f'SELECT code, name FROM federation ORDER BY name'))
+
+    return render_template('stats.html', title='Chessboard', form=form, countries1 = countries1, countries2 = countries2, best1=best1, best2=best2)
