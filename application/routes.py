@@ -7,6 +7,9 @@ import pandas as pd
 import json
 import plotly
 import plotly_express as px
+import chess.svg
+import chess.pgn
+from io import StringIO
 
 
 @app.route("/")
@@ -56,24 +59,25 @@ def logout():
     logout_user()
     return redirect(url_for('index'))
 
+@app.route("/callback")
+def cb():
+    return graph(request.args.get('data'))
+
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template('dashboard.html', title='Dashboard')
+    return render_template('dashboard.html', title='Dashboard', graphJSON=graph())
 
 
-@app.route("/game/new", methods=['GET', 'POST'])
-@login_required
-def add_game():
-    form = GameForm()
-    if form.validate_on_submit():
-        game = Game(player=current_user.username, piece_color=form.piece_color.data, result=form.result.data, moves=form.moves.data)
-        db.session.add(game)
-        db.session.commit()
-        flash('You have added a game!', 'success')
-        return redirect(url_for('index'))
-    return render_template('add_game.html', title='Add Game', form=form, legend='Add Game')
+def graph():
+    df = pd.DataFrame(px.data.gapminder())
+
+    fig = px.line(df[df['country']=='United Kingdom'], x='year', y='gdpPercap')
+
+    graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+    return graphJSON
 
 
 @app.route("/account", methods=['GET', 'POST'])
@@ -94,3 +98,47 @@ def account():
         form.elo.data = current_user.elo
         form.title.data = current_user.title
     return render_template('account.html', title='Account', form=form)
+
+@app.route("/game/new", methods=['GET', 'POST'])
+@login_required
+def add_game():
+    form = GameForm()
+    if form.validate_on_submit():
+        game = Game(player=current_user.username, piece_color=form.piece_color.data, result=form.result.data, moves=form.moves.data)
+        db.session.add(game)
+        db.session.commit()
+        flash('You have added a game!', 'success')
+        return redirect(url_for('index'))
+    return render_template('add_game.html', title='Add Game', form=form, legend='Add Game')
+
+@app.route("/game/view", methods=['GET', 'POST'])
+@login_required
+def view_game():
+    games = Game.query.filter_by(player=current_user.username).all()
+
+    return render_template('game_table.html', data=games)
+
+@app.route("/test", methods=['GET', 'POST'])
+def test():
+
+    moves = ['rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR']
+
+    pgn = request.form.get('view')
+
+    pgn = StringIO(pgn)
+    
+    game = chess.pgn.read_game(pgn)
+
+    while game.next():
+        game=game.next()
+        moves.append(game.board().fen())
+    
+    pgn_list = []
+
+    for move in moves:
+        board = chess.Board(move)
+        svg = chess.svg.board(board, size=350)
+        pgn_list.append(svg.encode("utf-8").decode("utf-8")[:-2])
+
+
+    return render_template("test.html", pgn_list=pgn_list, length=len(pgn_list))
