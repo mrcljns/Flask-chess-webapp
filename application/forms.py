@@ -56,6 +56,7 @@ class UpdateAccountForm(FlaskForm):
                         validators=[DataRequired(), Email()])
     elo = StringField('Elo',
                         validators=[DataRequired()])
+
     title = SelectField(u'Chess Title', 
     choices=[(' '), ('WCM'), ('WFM'), ('WIM'), ('WGM'), ('CM'), ('FM'), ('IM'), ('GM')], 
     validators=[DataRequired()])
@@ -80,4 +81,8 @@ class UpdateAccountForm(FlaskForm):
     
     def validate_elo(self, title):
         if title.data != current_user.title:
-            user = User.query.filter_by(title=title.data).first()
+
+class PlayerForm(FlaskForm):
+    player = StringField('Nickname',
+                    validators=[DataRequired(), Length(min=3, max=50)])
+    submit = SubmitField('Search')

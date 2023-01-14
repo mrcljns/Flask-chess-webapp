@@ -1,6 +1,6 @@
 from application import app, db, bcrypt
 from flask import render_template, request, url_for, flash, redirect
-from application.forms import RegistrationForm, LoginForm, GameForm, UpdateAccountForm
+from application.forms import RegistrationForm, LoginForm, GameForm, UpdateAccountForm, PlayerForm
 from flask_login import login_user, current_user, logout_user, login_required
 from application.models import User, Game
 import pandas as pd
@@ -10,7 +10,7 @@ import plotly_express as px
 import chess.svg
 import chess.pgn
 from io import StringIO
-
+import sqlite3
 
 @app.route("/")
 @app.route("/home")
@@ -111,6 +111,7 @@ def add_game():
         return redirect(url_for('index'))
     return render_template('add_game.html', title='Add Game', form=form, legend='Add Game')
 
+
 @app.route("/game/view", methods=['GET', 'POST'])
 @login_required
 def view_game():
@@ -142,3 +143,35 @@ def test():
 
 
     return render_template("test.html", pgn_list=pgn_list, length=len(pgn_list))
+
+ 
+@app.route("/account", methods=['GET', 'POST'])
+@login_required
+def account():
+    form = UpdateAccountForm()
+    if form.validate_on_submit():
+        current_user.username = form.username.data
+        current_user.email = form.email.data
+        current_user.elo = form.elo.data
+        current_user.title = form.title.data
+        db.session.commit()
+        flash('Your account has been updated!', 'success')
+        return redirect(url_for('account'))
+    elif request.method == 'GET':
+        form.username.data = current_user.username
+        form.email.data = current_user.email
+        form.elo.data = current_user.elo
+        form.title.data = current_user.title
+    return render_template('account.html', title='Account', form=form)
+
+@app.route("/board", methods=['GET', 'POST'])
+@login_required
+def board():
+    form = PlayerForm()
+    player = ''
+    if form.validate_on_submit():
+        player = form.player.data.upper()
+    con = sqlite3.connect("/Users/polaparol/Documents/DS/Python/Flask-chess-webapp-main/instance/chessgames.db")
+    cur = con.cursor()
+    games = cur.execute(f'SELECT * FROM games WHERE To_show is not null AND (upper(White) like "{player}%" or  upper(Black) like "{player}%") LIMIT 20')
+    return render_template('board.html', title='Chessboard', form=form, player=player, games=games)
