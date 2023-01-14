@@ -99,6 +99,7 @@ def account():
         form.title.data = current_user.title
     return render_template('account.html', title='Account', form=form)
 
+
 @app.route("/game/new", methods=['GET', 'POST'])
 @login_required
 def add_game():
@@ -144,25 +145,6 @@ def test():
 
     return render_template("test.html", pgn_list=pgn_list, length=len(pgn_list))
 
- 
-@app.route("/account", methods=['GET', 'POST'])
-@login_required
-def account():
-    form = UpdateAccountForm()
-    if form.validate_on_submit():
-        current_user.username = form.username.data
-        current_user.email = form.email.data
-        current_user.elo = form.elo.data
-        current_user.title = form.title.data
-        db.session.commit()
-        flash('Your account has been updated!', 'success')
-        return redirect(url_for('account'))
-    elif request.method == 'GET':
-        form.username.data = current_user.username
-        form.email.data = current_user.email
-        form.elo.data = current_user.elo
-        form.title.data = current_user.title
-    return render_template('account.html', title='Account', form=form)
 
 @app.route("/board", methods=['GET', 'POST'])
 @login_required
