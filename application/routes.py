@@ -163,18 +163,118 @@ def stats():
     con = sqlite3.connect("/Users/polaparol/Documents/DS/Python/Flask-chess-webapp-main/instance/rating.db")
     cur = con.cursor()
     form = SelectCountry()
-    country1 = ''
-    country2 = ''
-    best1 = ''
-    best2 = ''
+    country1 = 'POL'
+    country2 = 'GER'
+    statsData1 = []
+    statsData2 = []
+
     if form.validate_on_submit():
         country1 = form.country1.data.upper()
         country2 = form.country2.data.upper()
-        best1 = list(cur.execute(f"SELECT name, standard_rating FROM player WHERE fed = '{country1}'  ORDER BY standard_rating DESC"))
-        best2 = list(cur.execute(f"SELECT name, standard_rating FROM player WHERE fed = '{country2}'  ORDER BY standard_rating DESC"))
+    else:
+        form.country1.data = country1
+        form.country2.data = country2
 
+    
+    # statsData.append(['Description', 'First Country', 'Second Country'])
+    statsData1.append(['Best 3 players (classical rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}'  ORDER BY standard_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}'  ORDER BY standard_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 female players (classical rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' ORDER BY standard_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' ORDER BY standard_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 junior players (classical rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND born_year >= 2005 ORDER BY standard_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND born_year >= 2005 ORDER BY standard_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 female junior players (classical rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' AND born_year >= 2005 ORDER BY standard_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' AND born_year >= 2005 ORDER BY standard_rating DESC LIMIT 3"))])
+
+    statsData1.append(['Best 3 players (rapid rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}'  ORDER BY rapid_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}'  ORDER BY rapid_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 female players (rapid rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' ORDER BY rapid_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' ORDER BY rapid_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 junior players (rapid rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND born_year >= 2005 ORDER BY rapid_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND born_year >= 2005 ORDER BY rapid_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 female junior players (rapid rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' AND born_year >= 2005 ORDER BY rapid_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' AND born_year >= 2005 ORDER BY rapid_rating DESC LIMIT 3"))])
+    
+    statsData1.append(['Best 3 players (blitz rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}'  ORDER BY blitz_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}'  ORDER BY blitz_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 female players (blitz rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' ORDER BY blitz_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' ORDER BY blitz_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 junior players (blitz rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND born_year >= 2005 ORDER BY blitz_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND born_year >= 2005 ORDER BY blitz_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 female junior players (blitz rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' AND born_year >= 2005 ORDER BY blitz_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' AND born_year >= 2005 ORDER BY blitz_rating DESC LIMIT 3"))])
+ 
+    statsData2.append(['Number of Females',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND sex = 'F'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND sex = 'F'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of Males',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND sex = 'M'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND sex = 'M'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of junior Females',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND sex = 'F' AND born_year >= 2005 ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND sex = 'F' AND born_year >= 2005 ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of junior Males',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND sex = 'M' AND born_year >= 2005 ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND sex = 'M' AND born_year >= 2005 ORDER BY standard_rating DESC "))
+        ])
+
+    statsData2.append(['Number of GM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'GM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'GM'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of IM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'IM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'IM'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of FM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'FM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'FM'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of CM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'IM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'IM'  ORDER BY standard_rating DESC "))
+        ])
+    
+    statsData2.append(['Number of WGM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'GM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'GM'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of WIM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'IM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'IM'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of WFM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'FM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'FM'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of WCM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'IM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'IM'  ORDER BY standard_rating DESC "))
+        ])
+   
+   
+    
+    # best1 = list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}'  ORDER BY standard_rating DESC LIMIT 3"))
+    # best2 = list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}'  ORDER BY standard_rating DESC LIMIT 3"))
+    # bestw1 = list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' ORDER BY standard_rating DESC LIMIT 3"))
+    # bestw2 = list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' ORDER BY standard_rating DESC LIMIT 3"))
 
     countries1 = list(cur.execute(f'SELECT code, name FROM federation ORDER BY name'))
     countries2 = list(cur.execute(f'SELECT code, name FROM federation ORDER BY name'))
 
-    return render_template('stats.html', title='Chessboard', form=form, countries1 = countries1, countries2 = countries2, best1=best1, best2=best2)
+    return render_template('stats.html', title='Chessboard', form=form, countries1 = countries1, countries2 = countries2, statsData1=statsData1, statsData2=statsData2)
