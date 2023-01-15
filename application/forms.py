@@ -2,7 +2,7 @@ from flask_wtf import FlaskForm
 from flask_login import current_user
 from wtforms import StringField, PasswordField, SubmitField, BooleanField, SelectField, IntegerField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, NumberRange
-from application.models import User
+from application.models import User, Country
 
 class RegistrationForm(FlaskForm):
     username = StringField('Username',
@@ -87,3 +87,18 @@ class PlayerForm(FlaskForm):
     player = StringField('Nickname',
                     validators=[DataRequired(), Length(min=3, max=50)])
     submit = SubmitField('Search')
+
+class SelectCountry(FlaskForm):
+    country1 = SelectField('First Country',
+                    validators=[DataRequired(), Length(min=3, max=100)])
+    country2 = SelectField('Second Country',
+                    validators=[DataRequired(), Length(min=3, max=100)])
+
+    submit = SubmitField('Compare Selected Countries')
+
+    def __init__(self):
+        super(SelectCountry, self).__init__()
+        self.country1.choices = [(c.code, c.name) for c in Country.query.all()]
+        self.country2.choices = [(c.code, c.name) for c in Country.query.all()]
+
+

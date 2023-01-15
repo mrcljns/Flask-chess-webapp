@@ -30,5 +30,10 @@ class Game(db.Model, UserMixin):
     def __repr__(self):
         return f"User('{self.player}', '{self.piece_color}', '{self.result}', '{self.moves}')"
 
+class Country(db.Model, UserMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(3), unique = True, nullable = False)
+    name = db.Column(db.String(255), unique = False, nullable = False)
+
 with app.app_context():
     db.create_all()
