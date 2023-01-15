@@ -81,6 +81,7 @@ class UpdateAccountForm(FlaskForm):
     
     def validate_elo(self, title):
         if title.data != current_user.title:
+            user = User.query.filter_by(elo=title.data).first()
 
 class PlayerForm(FlaskForm):
     player = StringField('Nickname',
