@@ -6,5 +6,4 @@ data/ratings.txt
 data/rating_ver2.db
 data/chess_openings.csv
 data/query1.sql
-__pycache__/
 chessgames.db
