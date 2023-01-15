@@ -1,4 +1,5 @@
 from application import app, db, bcrypt
+from application.queries import group_on_all, group_on_opening
 from flask import render_template, request, url_for, flash, redirect
 from application.forms import RegistrationForm, LoginForm, GameForm, UpdateAccountForm, PlayerForm
 from flask_login import login_user, current_user, logout_user, login_required
@@ -54,28 +55,58 @@ def login():
 
     return render_template('login.html', title='Login', form=form)
 
+
 @app.route("/logout")
 def logout():
     logout_user()
     return redirect(url_for('index'))
 
-@app.route("/callback")
+
+@app.route("/callback", methods = ['POST', 'GET'])
 def cb():
-    return graph(request.args.get('data'))
+    return graph(chosen_user=request.args.get('user'), graph_type=request.args.get('graph_type'))
 
 
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template('dashboard.html', title='Dashboard', graphJSON=graph())
+    return render_template('dashboard.html', title='Dashboard', 
+    graphJSON=graph(chosen_user=current_user.username, graph_type="general"),
+    logged_user=current_user.username)
 
 
-def graph():
-    df = pd.DataFrame(px.data.gapminder())
+def graph(chosen_user, graph_type="general"):
 
-    fig = px.line(df[df['country']=='United Kingdom'], x='year', y='gdpPercap')
+    con = sqlite3.connect("instance/chessdb.db")
+    cur = con.cursor()
+    if graph_type == "general":
+        games = cur.execute(group_on_all())
+
+        cols = [desc[0] for desc in games.description]
+
+        df = pd.DataFrame(games.fetchall(), columns=cols)
+
+        fig = px.bar(df[df['player']==chosen_user], x='piece_color', y='count', color='result',
+        labels={"piece_color": "Color of the pieces", "count": "Count", "result": "Result"}, title=f"{chosen_user} game stats",
+        category_orders={"result": ["won", "lost", "draw"]})
+        fig.update_xaxes(categoryorder='array', categoryarray= ['white', 'black'])
+        
+    else:
+        games = cur.execute(group_on_opening())
+    
+        cols = [desc[0] for desc in games.description]
+
+        df = pd.DataFrame(games.fetchall(), columns=cols)
+
+        fig = px.bar(df[df['player']==chosen_user].sort_values('count', ascending=False), x='name', y='count', color='result',
+        labels={"name": "Opening name", "count": "Count", "result": "Result"}, title=f"{chosen_user} opening stats",
+        category_orders={"result": ["won", "lost", "draw"]})
+        
+    fig.update_layout(yaxis=dict(dtick = 1))
 
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
+
+    con.close()
 
     return graphJSON
 
@@ -99,12 +130,15 @@ def account():
         form.title.data = current_user.title
     return render_template('account.html', title='Account', form=form)
 
+
 @app.route("/game/new", methods=['GET', 'POST'])
 @login_required
 def add_game():
     form = GameForm()
     if form.validate_on_submit():
-        game = Game(player=current_user.username, piece_color=form.piece_color.data, result=form.result.data, moves=form.moves.data)
+        pgn = StringIO(form.moves.data)
+        pgn = str(chess.pgn.read_game(pgn)[0])
+        game = Game(player=current_user.username, piece_color=form.piece_color.data, result=form.result.data, moves=pgn)
         db.session.add(game)
         db.session.commit()
         flash('You have added a game!', 'success')
@@ -119,12 +153,14 @@ def view_game():
 
     return render_template('game_table.html', data=games)
 
+
 @app.route("/test", methods=['GET', 'POST'])
 def test():
 
     moves = ['rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR']
 
     pgn = request.form.get('view')
+    color = request.form.get('color')
 
     pgn = StringIO(pgn)
     
@@ -136,33 +172,20 @@ def test():
     
     pgn_list = []
 
-    for move in moves:
-        board = chess.Board(move)
-        svg = chess.svg.board(board, size=350)
-        pgn_list.append(svg.encode("utf-8").decode("utf-8")[:-2])
+    if color == "black":
+        for move in moves:
+            board = chess.Board(move)
+            svg = chess.svg.board(board, flipped=True, size=350)
+            pgn_list.append(svg.encode("utf-8").decode("utf-8")[:-2])
+    else:
+        for move in moves:
+            board = chess.Board(move)
+            svg = chess.svg.board(board, size=350)
+            pgn_list.append(svg.encode("utf-8").decode("utf-8")[:-2])
 
 
     return render_template("test.html", pgn_list=pgn_list, length=len(pgn_list))
 
- 
-@app.route("/account", methods=['GET', 'POST'])
-@login_required
-def account():
-    form = UpdateAccountForm()
-    if form.validate_on_submit():
-        current_user.username = form.username.data
-        current_user.email = form.email.data
-        current_user.elo = form.elo.data
-        current_user.title = form.title.data
-        db.session.commit()
-        flash('Your account has been updated!', 'success')
-        return redirect(url_for('account'))
-    elif request.method == 'GET':
-        form.username.data = current_user.username
-        form.email.data = current_user.email
-        form.elo.data = current_user.elo
-        form.title.data = current_user.title
-    return render_template('account.html', title='Account', form=form)
 
 @app.route("/board", methods=['GET', 'POST'])
 @login_required
@@ -171,7 +194,7 @@ def board():
     player = ''
     if form.validate_on_submit():
         player = form.player.data.upper()
-    con = sqlite3.connect("/Users/polaparol/Documents/DS/Python/Flask-chess-webapp-main/instance/chessgames.db")
+    con = sqlite3.connect("chessgames.db")
     cur = con.cursor()
     games = cur.execute(f'SELECT * FROM games WHERE To_show is not null AND (upper(White) like "{player}%" or  upper(Black) like "{player}%") LIMIT 20')
     return render_template('board.html', title='Chessboard', form=form, player=player, games=games)

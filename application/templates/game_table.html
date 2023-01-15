@@ -23,6 +23,7 @@
                 <td>
                     <form method="POST" action="{{ url_for('test') }}">
                         <input type="hidden" name="view" value="{{item.moves}}">
+                        <input type="hidden" name="color" value="{{item.piece_color}}">
                         <input onclick="window.location.href = '/test';" type="submit" value="View" />
                     </form>
                 </td>

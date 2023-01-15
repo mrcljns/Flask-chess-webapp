@@ -12,11 +12,14 @@
 </div>
 
 <div class="row p-4">
-    {% for pgn in pgn_list %}
-      <div class="d-flex justify-content-center text-center position-absolute invisible" id="board{{loop.index}}">
-        {{pgn | safe}}
-      </div>
-    {% endfor %}
+  <div class="d-flex justify-content-center text-center position-absolute visible" id="board0">
+    {{pgn_list[0] | safe}}
+  </div>
+  {% for i in range(1, length) %}
+    <div class="d-flex justify-content-center text-center position-absolute invisible" id="board{{loop.index}}">
+      {{pgn_list[i] | safe}}
+    </div>
+  {% endfor %}
 </div>
 
 
@@ -33,7 +36,7 @@
     }
   });
   $("#previous").on('click', function(){
-    if (count>1){
+    if (count>0){
       $("#board" + count).removeClass("visible");
       $("#board" + count).addClass("invisible");
       count--;
