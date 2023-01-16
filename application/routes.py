@@ -137,8 +137,23 @@ def add_game():
     form = GameForm()
     if form.validate_on_submit():
         pgn = StringIO(form.moves.data)
-        pgn = str(chess.pgn.read_game(pgn)[0])
-        game = Game(player=current_user.username, piece_color=form.piece_color.data, result=form.result.data, moves=pgn)
+        pgn = chess.pgn.read_game(pgn)
+        game_result = pgn.headers.get('Result')
+        pgn = str(pgn[0])
+        if game_result == "1-0":
+            if form.piece_color.data=="white":
+                game = Game(player=current_user.username, piece_color="white", result="won", moves=pgn)
+            else:
+                game = Game(player=current_user.username, piece_color="black", result="lost", moves=pgn)
+        elif game_result == "1/2-1/2":
+            game = Game(player=current_user.username, piece_color=form.piece_color.data, result="draw", moves=pgn)
+        elif game_result == "0-1":
+            if form.piece_color.data=="white":
+                game = Game(player=current_user.username, piece_color="white", result="lost", moves=pgn)
+            else:
+                game = Game(player=current_user.username, piece_color="black", result="won", moves=pgn)
+        else:
+            game = Game(player=current_user.username, piece_color=form.piece_color.data, result=form.result.data, moves=pgn)
         db.session.add(game)
         db.session.commit()
         flash('You have added a game!', 'success')
