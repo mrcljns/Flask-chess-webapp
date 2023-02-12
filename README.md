@@ -1,6 +1,10 @@
 # Flask-chess-webapp
 This is the final project for the Python and SQL course I did during my masters degree. It is a webapp that enables registering, adding chess games in a .png format, viewing games on a chessboard and analyzing your performance on graphs.
 
+# Guide
+* It is not necessary to download the chessdb.db file. If it is absent, running the webapp automatically creates an empty database with only the openings table filled out.
+* The jupyter notebooks create two databases used for analyzing chosen games of grandmasters. Without running them, certain functionalities of the webapp will not work.
+
 # Requirements:
 * chess==1.9.3
 * Flask==1.1.2
