@@ -1,16 +1,9 @@
 from application import app, bcrypt
 from application.queries import group_on_all, group_on_opening, elo_timeline
-<<<<<<< HEAD
 from application.forms import RegistrationForm, LoginForm, GameForm, UpdateAccountForm, PlayerForm, SelectCountry
 from application.models import User, Game
 from flask import render_template, request, url_for, flash, redirect
 from flask_login import login_user, current_user, logout_user, login_required
-=======
-from flask import render_template, request, url_for, flash, redirect
-from application.forms import RegistrationForm, LoginForm, GameForm, UpdateAccountForm, PlayerForm, SelectCountry
-from flask_login import login_user, current_user, logout_user, login_required
-from application.models import User, Game
->>>>>>> 541bba07f035b699ccbcce133fd5098240c8b29d
 import json
 import plotly
 import plotly_express as px
@@ -140,13 +133,10 @@ def account():
     if form.validate_on_submit():
         conn = sqlite3.connect('instance/chessdb.db')
         curs = conn.cursor()
-<<<<<<< HEAD
         curs.execute(f'''UPDATE game
         SET player = "{form.username.data}"
         WHERE player = "{current_user.username}"
         ''')
-=======
->>>>>>> 541bba07f035b699ccbcce133fd5098240c8b29d
         curs.execute(f'''UPDATE user
         SET username = "{form.username.data}", email = "{form.email.data}", 
         elo = "{form.elo.data}", title = "{form.title.data}" 
@@ -190,12 +180,9 @@ def add_game():
                 current_user.elo += 100
                 game = Game(player=current_user.username, piece_color="black", result="won", moves=pgn, 
                 elo = np.clip(current_user.elo, 1000, 4000))
-<<<<<<< HEAD
         elif game_result == "1/2-1/2":
             game = Game(player=current_user.username, piece_color=form.piece_color.data, result="draw", moves=pgn, 
             elo = np.clip(current_user.elo, 1000, 4000))
-=======
->>>>>>> 541bba07f035b699ccbcce133fd5098240c8b29d
         elif form.result.data == "won":  
             current_user.elo += 100 
             game = Game(player=current_user.username, piece_color=form.piece_color.data, result=form.result.data, moves=pgn, 
@@ -236,13 +223,8 @@ def view_game():
     return render_template('game_table.html', data=games)
 
 
-<<<<<<< HEAD
 @app.route("/game/board", methods=['GET', 'POST'])
 def game_board():
-=======
-@app.route("/test", methods=['GET', 'POST'])
-def test():
->>>>>>> 541bba07f035b699ccbcce133fd5098240c8b29d
 
     moves = ['rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR']
 
@@ -271,11 +253,7 @@ def test():
             pgn_list.append(svg.encode("utf-8").decode("utf-8")[:-2])
 
 
-<<<<<<< HEAD
     return render_template("game_board.html", pgn_list=pgn_list, length=len(pgn_list))
-=======
-    return render_template("test.html", pgn_list=pgn_list, length=len(pgn_list))
->>>>>>> 541bba07f035b699ccbcce133fd5098240c8b29d
 
 
 @app.route("/board", methods=['GET', 'POST'])
@@ -309,12 +287,7 @@ def stats():
         form.country1.data = country1
         form.country2.data = country2
 
-<<<<<<< HEAD
 
-=======
-    
-    # statsData.append(['Description', 'First Country', 'Second Country'])
->>>>>>> 541bba07f035b699ccbcce133fd5098240c8b29d
     statsData1.append(['Best 3 players (classical rating)',
         list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}'  ORDER BY standard_rating DESC LIMIT 3")),
         list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}'  ORDER BY standard_rating DESC LIMIT 3"))])
@@ -405,15 +378,6 @@ def stats():
         list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'IM'  ORDER BY standard_rating DESC "))
         ])
    
-<<<<<<< HEAD
-=======
-   
-    
-    # best1 = list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}'  ORDER BY standard_rating DESC LIMIT 3"))
-    # best2 = list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}'  ORDER BY standard_rating DESC LIMIT 3"))
-    # bestw1 = list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' ORDER BY standard_rating DESC LIMIT 3"))
-    # bestw2 = list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' ORDER BY standard_rating DESC LIMIT 3"))
->>>>>>> 541bba07f035b699ccbcce133fd5098240c8b29d
 
     countries1 = list(cur.execute(f'SELECT code, name FROM federation ORDER BY name'))
     countries2 = list(cur.execute(f'SELECT code, name FROM federation ORDER BY name'))
