@@ -23,17 +23,10 @@
                 <td>{{item[4]}}</td>
                 <td>{{item[5]}}</td>
                 <td>
-<<<<<<< HEAD
                     <form method="POST" action="{{ url_for('game_board') }}">
                         <input type="hidden" name="view" value="{{item[4]}}">
                         <input type="hidden" name="color" value="{{item[2]}}">
                         <input onclick="window.location.href = '/game/board';" type="submit" value="View" />
-=======
-                    <form method="POST" action="{{ url_for('test') }}">
-                        <input type="hidden" name="view" value="{{item[4]}}">
-                        <input type="hidden" name="color" value="{{item[2]}}">
-                        <input onclick="window.location.href = '/test';" type="submit" value="View" />
->>>>>>> 541bba07f035b699ccbcce133fd5098240c8b29d
                     </form>
                 </td>
             </tr>
