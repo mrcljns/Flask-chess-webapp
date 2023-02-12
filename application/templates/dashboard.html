@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+
+
+<script>
+    function which_checked() {
+        return $("input[name='type']:checked").val();
+    }
+
+    function cb(selection1, selection2) {
+        $.getJSON({
+            url: "/callback", data: { 'user': selection1, 'graph_type': selection2 }, success: function (result) {
+                Plotly.newPlot('chart', result, {staticPlot: true});
+            }
+        });
+    }
+</script>
+
+<div class="row p-4">
+    <div class="form-group">
+        <input type="text" class="form-control" id="user" name="user" value="{{ logged_user }}" placeholder="Choose user" onchange="cb(selection1=this.value, selection2=which_checked())">
+    </div>
+</div>
+
+<div class="form-check">
+        <input type="radio" class="btn-check" id="general" name="type" value="general" checked="checked" onclick="cb(selection1=document.getElementById('user').value, selection2='general')">
+        <label class="btn btn-secondary" for="general">General</label>
+        <input type="radio" class="btn-check" id="opening" name="type" value="opening" onclick="cb(selection1=document.getElementById('user').value, selection2='opening')">
+        <label class="btn btn-secondary" for="opening">Opening</label>
+        <input type="radio" class="btn-check" id="timeline" name="type" value="timeline" onclick="cb(selection1=document.getElementById('user').value, selection2='timeline')">
+        <label class="btn btn-secondary" for="timeline">Elo timeline</label>
+</div>
+
+
+<div class="card m-auto" style="width: 90%;">
+        <div class="card-body">
+            <div id="chart" class="chart"></div>
+        </div>
+</div>
+
+
+<script>
+    d = {{ graphJSON | safe }};
+    Plotly.newPlot("chart", d, {});
+</script>
+{% endblock content %}

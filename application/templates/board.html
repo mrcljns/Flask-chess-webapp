@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        <fieldset class="form-group">
+            <legend class="border-bottom mb-4">Input Nickname</legend>
+            <div class="form-group">
+                {{ form.player.label(class="form-control-label") }}
+
+                {% if form.player.errors %}
+                    {{ form.player(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.player.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ form.player(class="form-control form-control-lg") }}
+                {% endif %}
+            </div>
+        </fieldset>
+        <div class="form-group">
+            {{ form.submit(class="btn btn-outline-info") }}
+        </div>
+    </form>
+    <table class="table table-bordered table-sm" style = 'width:100%'> 
+    <tr>
+    <td style='width:30%'>
+    {% for game in games %}
+    <a href="http://www.chess.com/emboard?id={{ game.5 }}" target="chesscomgame" style='color:gray'> {{ game.0 }} - {{ game.1 }} {{ game.2 }}</a> <br/> 
+    {% endfor %}
+    </td>
+    <td>
+    <iframe name="chesscomgame" id="9862859" allowtransparency="true" frameborder="0" style="width:100%;border:none;" src="http://www.chess.com/emboard?id=9862859"></iframe><script>window.addEventListener("message",e=>{e['data']&&"9862859"===e['data']['id']&&document.getElementById(`${e['data']['id']}`)&&(document.getElementById(`${e['data']['id']}`).style.height=`${e['data']['frameHeight']+30}px`)});</script>
+    </td>
+    </tr> 
+    </table>
+{% endblock content %}
