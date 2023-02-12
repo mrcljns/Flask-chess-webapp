@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+{% block content %}
+
+
+<div class="content-section">
+    <form method="POST" action="">
+        {{ form.hidden_tag() }}
+        <fieldset class="form-group">
+            <legend class="border-bottom mb-4">Compare two chess federations</legend>
+            <div class="form-group">
+                {{ form.country1.label(class="form-control-label") }}
+
+                {% if form.country1.errors %}
+                    {{ form.country1(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.country1.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ form.country1(class="form-control form-control-lg") }}
+                {% endif %}
+            </div>
+            <div class="form-group">
+                {{ form.country2.label(class="form-control-label") }}
+                {% if form.country2.errors %}
+                    {{ form.country2(class="form-control form-control-lg is-invalid") }}
+                    <div class="invalid-feedback">
+                        {% for error in form.country2.errors %}
+                            <span>{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {{ form.country2(class="form-control form-control-lg") }}
+                {% endif %}
+            </div>
+           
+        </fieldset>
+        <div class="form-group">
+            {{ form.submit(class="btn btn-outline-info") }}
+        </div>
+    </form>
+</div>
+
+
+<table class="table table-bordered table-sm">
+    <thead class="table-dark"><tr><th scope="col">Description</th><th scope="col">First Country</th><th scope="col">Second Country</th></tr></thead>
+    {% for row in statsData1 %}
+    <tr><td>{{ row.0 }}</td><td>{% for best in row.1 %}<a href= 'https://ratings.fide.com/profile/{{ best.0 }}' target="_new" style="color:gray">{{ best.1 }}: {{ best.2 }}</a><br/>{% endfor %}</td><td>{% for best in row.2 %}<a href= 'https://ratings.fide.com/profile/{{ best.0 }}' target="_new" style="color:gray">{{ best.1 }}: {{ best.2 }}</a><br/>{% endfor %}</td></tr>
+    {% endfor %}
+    {% for row2 in statsData2 %}
+    <tr><td>{{ row2.0 }}</td>
+        <td style="text-align:right; {% if row2.1.0.0 > row2.2.0.0 %} color:green;{% endif %} {% if row2.1.0.0 < row2.2.0.0 %} color:red;{% endif %}" >{{ row2.1.0.0 }}</td>
+        <td style="text-align:right; {% if row2.1.0.0 > row2.2.0.0 %} color:red;{% endif %} {% if row2.1.0.0 < row2.2.0.0 %} color:green;{% endif %}">{{ row2.2.0.0 }}</td></tr>
+    {% endfor %}
+</table>
+
+
+
+{% endblock content %} 

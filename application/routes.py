@@ -1,10 +1,9 @@
-from application import app, db, bcrypt
-from application.queries import group_on_all, group_on_opening
-from flask import render_template, request, url_for, flash, redirect
-from application.forms import RegistrationForm, LoginForm, GameForm, UpdateAccountForm, PlayerForm
-from flask_login import login_user, current_user, logout_user, login_required
+from application import app, bcrypt
+from application.queries import group_on_all, group_on_opening, elo_timeline
+from application.forms import RegistrationForm, LoginForm, GameForm, UpdateAccountForm, PlayerForm, SelectCountry
 from application.models import User, Game
-import pandas as pd
+from flask import render_template, request, url_for, flash, redirect
+from flask_login import login_user, current_user, logout_user, login_required
 import json
 import plotly
 import plotly_express as px
@@ -12,6 +11,7 @@ import chess.svg
 import chess.pgn
 from io import StringIO
 import sqlite3
+import numpy as np
 
 @app.route("/")
 @app.route("/home")
@@ -29,8 +29,11 @@ def register():
     if form.validate_on_submit():
         hashed_password = bcrypt.generate_password_hash(form.password.data).decode('utf-8')
         user = User(username=form.username.data, email=form.email.data, year_of_birth=form.year_of_birth.data, elo=form.elo.data, title=form.title.data, password=hashed_password)
-        db.session.add(user)
-        db.session.commit()
+        conn = sqlite3.connect('instance/chessdb.db')
+        curs = conn.cursor()
+        curs.execute(f"INSERT INTO user (username, email, password, year_of_birth, elo, title) VALUES {user}")
+        conn.commit()
+        conn.close()
         flash("Your account has been created! Welcome to ChesStats!", "success")
         return redirect(url_for("login"))
 
@@ -45,14 +48,22 @@ def login():
     form = LoginForm()
 
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
-        if user and bcrypt.check_password_hash(user.password, form.password.data):
-            login_user(user, remember=form.remember.data)
-            next_page = request.args.get('next')
-            return redirect(next_page) if next_page else redirect(url_for('index'))
+        conn = sqlite3.connect('instance/chessdb.db')
+        curs = conn.cursor()
+        curs.execute("SELECT * FROM user WHERE email = (?)", [form.email.data])
+        query = curs.fetchone()
+        conn.commit()
+        conn.close()
+        if query:
+            user = User(username=query[1], email=query[2], password=query[3], year_of_birth=query[4], elo=query[5], title=query[6])
+            if user and bcrypt.check_password_hash(user.password, form.password.data):
+                login_user(user, remember=form.remember.data)
+                next_page = request.args.get('next')
+                return redirect(next_page) if next_page else redirect(url_for('index'))
+            else:
+                flash('Login Unsuccessful. Please check email and password', 'danger')
         else:
-            flash('Login Unsuccessful. Please check email and password', 'danger')
-
+            flash('Login Unsuccessful. No such email', 'danger')
     return render_template('login.html', title='Login', form=form)
 
 
@@ -77,36 +88,40 @@ def dashboard():
 
 def graph(chosen_user, graph_type="general"):
 
-    con = sqlite3.connect("instance/chessdb.db")
-    cur = con.cursor()
     if graph_type == "general":
-        games = cur.execute(group_on_all())
+        df = group_on_all(chosen_user = chosen_user)
 
-        cols = [desc[0] for desc in games.description]
-
-        df = pd.DataFrame(games.fetchall(), columns=cols)
-
-        fig = px.bar(df[df['player']==chosen_user], x='piece_color', y='count', color='result',
+        fig = px.bar(df, x='piece_color', y='count', color='result',
         labels={"piece_color": "Color of the pieces", "count": "Count", "result": "Result"}, title=f"{chosen_user} game stats",
         category_orders={"result": ["won", "lost", "draw"]})
         fig.update_xaxes(categoryorder='array', categoryarray= ['white', 'black'])
+        fig.update_yaxes(fixedrange=False)
+        fig.update_xaxes(categoryorder='total descending')
         
-    else:
-        games = cur.execute(group_on_opening())
-    
-        cols = [desc[0] for desc in games.description]
+    elif graph_type == "opening":
+        df = group_on_opening(chosen_user = chosen_user)
 
-        df = pd.DataFrame(games.fetchall(), columns=cols)
-
-        fig = px.bar(df[df['player']==chosen_user].sort_values('count', ascending=False), x='name', y='count', color='result',
+        fig = px.bar(df.sort_values('count', ascending=False), x='name', y='count', color='result',
         labels={"name": "Opening name", "count": "Count", "result": "Result"}, title=f"{chosen_user} opening stats",
         category_orders={"result": ["won", "lost", "draw"]})
-        
-    fig.update_layout(yaxis=dict(dtick = 1))
+        fig.update_yaxes(fixedrange=False)
+        fig.update_xaxes(categoryorder='total descending')
+    
+    else:
+        df = elo_timeline(chosen_user = chosen_user).reset_index(drop=True)
+        df.index += 1
+
+        fig = px.line(df.tail(10), y='elo', text='elo', markers=True,
+        labels={"index": "Game", "elo": "Elo after game"}, 
+        title=f"{chosen_user} elo timeline")
+
+        fig.update_traces(textposition="top right")
+        fig.update_layout(xaxis=dict(dtick = 1))
+        fig.update_xaxes(rangemode="nonnegative")
+        fig.update_layout(yaxis_range=[900, 4100])
+        fig.update_layout(yaxis=dict(dtick = 500))
 
     graphJSON = json.dumps(fig, cls=plotly.utils.PlotlyJSONEncoder)
-
-    con.close()
 
     return graphJSON
 
@@ -116,11 +131,18 @@ def graph(chosen_user, graph_type="general"):
 def account():
     form = UpdateAccountForm()
     if form.validate_on_submit():
-        current_user.username = form.username.data
-        current_user.email = form.email.data
-        current_user.elo = form.elo.data
-        current_user.title = form.title.data
-        db.session.commit()
+        conn = sqlite3.connect('instance/chessdb.db')
+        curs = conn.cursor()
+        curs.execute(f'''UPDATE game
+        SET player = "{form.username.data}"
+        WHERE player = "{current_user.username}"
+        ''')
+        curs.execute(f'''UPDATE user
+        SET username = "{form.username.data}", email = "{form.email.data}", 
+        elo = "{form.elo.data}", title = "{form.title.data}" 
+        WHERE id = "{current_user.get_id()}"''')
+        conn.commit()
+        conn.close()
         flash('Your account has been updated!', 'success')
         return redirect(url_for('account'))
     elif request.method == 'GET':
@@ -142,20 +164,47 @@ def add_game():
         pgn = str(pgn[0])
         if game_result == "1-0":
             if form.piece_color.data=="white":
-                game = Game(player=current_user.username, piece_color="white", result="won", moves=pgn)
+                current_user.elo += 100
+                game = Game(player=current_user.username, piece_color="white", result="won", moves=pgn, 
+                elo = np.clip(current_user.elo, 1000, 4000))
             else:
-                game = Game(player=current_user.username, piece_color="black", result="lost", moves=pgn)
-        elif game_result == "1/2-1/2":
-            game = Game(player=current_user.username, piece_color=form.piece_color.data, result="draw", moves=pgn)
+                current_user.elo -= 100
+                game = Game(player=current_user.username, piece_color="black", result="lost", moves=pgn, 
+                elo = np.clip(current_user.elo, 1000, 4000))
         elif game_result == "0-1":
             if form.piece_color.data=="white":
-                game = Game(player=current_user.username, piece_color="white", result="lost", moves=pgn)
+                current_user.elo -= 100
+                game = Game(player=current_user.username, piece_color="white", result="lost", moves=pgn, 
+                elo = np.clip(current_user.elo, 1000, 4000))
             else:
-                game = Game(player=current_user.username, piece_color="black", result="won", moves=pgn)
+                current_user.elo += 100
+                game = Game(player=current_user.username, piece_color="black", result="won", moves=pgn, 
+                elo = np.clip(current_user.elo, 1000, 4000))
+        elif game_result == "1/2-1/2":
+            game = Game(player=current_user.username, piece_color=form.piece_color.data, result="draw", moves=pgn, 
+            elo = np.clip(current_user.elo, 1000, 4000))
+        elif form.result.data == "won":  
+            current_user.elo += 100 
+            game = Game(player=current_user.username, piece_color=form.piece_color.data, result=form.result.data, moves=pgn, 
+            elo = np.clip(current_user.elo, 1000, 4000))
+        elif form.result.data == "lost":
+            current_user.elo -= 100 
+            game = Game(player=current_user.username, piece_color=form.piece_color.data, result=form.result.data, moves=pgn, 
+            elo = np.clip(current_user.elo, 1000, 4000))
         else:
-            game = Game(player=current_user.username, piece_color=form.piece_color.data, result=form.result.data, moves=pgn)
-        db.session.add(game)
-        db.session.commit()
+            game = Game(player=current_user.username, piece_color=form.piece_color.data, result="draw", moves=pgn, 
+            elo = np.clip(current_user.elo, 1000, 4000))
+
+
+        conn = sqlite3.connect('instance/chessdb.db')
+        curs = conn.cursor()
+        curs.execute(f"INSERT INTO game (player, piece_color, result, moves, elo) VALUES {game}")
+        curs.execute(f'''UPDATE user 
+        SET elo = {np.clip(current_user.elo, 1000, 4000)}
+        WHERE email = '{current_user.email}'
+        ''')
+        conn.commit()
+        conn.close()
         flash('You have added a game!', 'success')
         return redirect(url_for('index'))
     return render_template('add_game.html', title='Add Game', form=form, legend='Add Game')
@@ -164,13 +213,18 @@ def add_game():
 @app.route("/game/view", methods=['GET', 'POST'])
 @login_required
 def view_game():
-    games = Game.query.filter_by(player=current_user.username).all()
+    conn = sqlite3.connect('instance/chessdb.db')
+    curs = conn.cursor()
+    curs.execute(f"SELECT *, ROW_NUMBER() OVER (ORDER BY id ASC) FROM game WHERE player = '{current_user.username}'")
+    games = curs.fetchall()
+    conn.commit()
+    conn.close()
 
     return render_template('game_table.html', data=games)
 
 
-@app.route("/test", methods=['GET', 'POST'])
-def test():
+@app.route("/game/board", methods=['GET', 'POST'])
+def game_board():
 
     moves = ['rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR']
 
@@ -199,7 +253,7 @@ def test():
             pgn_list.append(svg.encode("utf-8").decode("utf-8")[:-2])
 
 
-    return render_template("test.html", pgn_list=pgn_list, length=len(pgn_list))
+    return render_template("game_board.html", pgn_list=pgn_list, length=len(pgn_list))
 
 
 @app.route("/board", methods=['GET', 'POST'])
@@ -209,7 +263,126 @@ def board():
     player = ''
     if form.validate_on_submit():
         player = form.player.data.upper()
-    con = sqlite3.connect("chessgames.db")
+    con = sqlite3.connect("instance/chessgames.db")
     cur = con.cursor()
     games = cur.execute(f'SELECT * FROM games WHERE To_show is not null AND (upper(White) like "{player}%" or  upper(Black) like "{player}%") LIMIT 20')
     return render_template('board.html', title='Chessboard', form=form, player=player, games=games)
+
+
+@app.route("/stats", methods=['GET', 'POST'])
+@login_required
+def stats():
+    con = sqlite3.connect("instance/rating.db")
+    cur = con.cursor()
+    form = SelectCountry()
+    country1 = 'POL'
+    country2 = 'GER'
+    statsData1 = []
+    statsData2 = []
+
+    if form.validate_on_submit():
+        country1 = form.country1.data.upper()
+        country2 = form.country2.data.upper()
+    else:
+        form.country1.data = country1
+        form.country2.data = country2
+
+
+    statsData1.append(['Best 3 players (classical rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}'  ORDER BY standard_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}'  ORDER BY standard_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 female players (classical rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' ORDER BY standard_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' ORDER BY standard_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 junior players (classical rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND born_year >= 2005 ORDER BY standard_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND born_year >= 2005 ORDER BY standard_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 female junior players (classical rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' AND born_year >= 2005 ORDER BY standard_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' AND born_year >= 2005 ORDER BY standard_rating DESC LIMIT 3"))])
+
+    statsData1.append(['Best 3 players (rapid rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}'  ORDER BY rapid_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}'  ORDER BY rapid_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 female players (rapid rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' ORDER BY rapid_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' ORDER BY rapid_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 junior players (rapid rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND born_year >= 2005 ORDER BY rapid_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND born_year >= 2005 ORDER BY rapid_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 female junior players (rapid rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' AND born_year >= 2005 ORDER BY rapid_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' AND born_year >= 2005 ORDER BY rapid_rating DESC LIMIT 3"))])
+    
+    statsData1.append(['Best 3 players (blitz rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}'  ORDER BY blitz_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}'  ORDER BY blitz_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 female players (blitz rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' ORDER BY blitz_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' ORDER BY blitz_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 junior players (blitz rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND born_year >= 2005 ORDER BY blitz_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND born_year >= 2005 ORDER BY blitz_rating DESC LIMIT 3"))])
+    statsData1.append(['Best 3 female junior players (blitz rating)',
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country1}' AND sex = 'F' AND born_year >= 2005 ORDER BY blitz_rating DESC LIMIT 3")),
+        list(cur.execute(f"SELECT id_number, name, standard_rating FROM player WHERE fed = '{country2}' AND sex = 'F' AND born_year >= 2005 ORDER BY blitz_rating DESC LIMIT 3"))])
+ 
+    statsData2.append(['Number of Females',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND sex = 'F'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND sex = 'F'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of Males',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND sex = 'M'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND sex = 'M'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of junior Females',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND sex = 'F' AND born_year >= 2005 ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND sex = 'F' AND born_year >= 2005 ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of junior Males',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND sex = 'M' AND born_year >= 2005 ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND sex = 'M' AND born_year >= 2005 ORDER BY standard_rating DESC "))
+        ])
+
+    statsData2.append(['Number of GM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'GM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'GM'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of IM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'IM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'IM'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of FM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'FM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'FM'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of CM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'IM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'IM'  ORDER BY standard_rating DESC "))
+        ])
+    
+    statsData2.append(['Number of WGM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'GM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'GM'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of WIM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'IM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'IM'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of WFM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'FM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'FM'  ORDER BY standard_rating DESC "))
+        ])
+    statsData2.append(['Number of WCM',
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country1}' AND title = 'IM'  ORDER BY standard_rating DESC ")),
+        list(cur.execute(f"SELECT count(*) FROM player WHERE fed = '{country2}' AND title = 'IM'  ORDER BY standard_rating DESC "))
+        ])
+   
+
+    countries1 = list(cur.execute(f'SELECT code, name FROM federation ORDER BY name'))
+    countries2 = list(cur.execute(f'SELECT code, name FROM federation ORDER BY name'))
+
+    con.commit()
+    con.close()
+
+    return render_template('stats.html', title='Chessboard', form=form, countries1 = countries1, countries2 = countries2, statsData1=statsData1, statsData2=statsData2)

@@ -2,7 +2,8 @@ from flask_wtf import FlaskForm
 from flask_login import current_user
 from wtforms import StringField, PasswordField, SubmitField, BooleanField, SelectField, IntegerField
 from wtforms.validators import DataRequired, Length, Email, EqualTo, ValidationError, NumberRange
-from application.models import User
+import sqlite3
+
 
 class RegistrationForm(FlaskForm):
     username = StringField('Username',
@@ -15,26 +16,32 @@ class RegistrationForm(FlaskForm):
     year_of_birth = StringField('Year of birth',
                         validators=[DataRequired()])
     elo = IntegerField('Rating Elo', validators=[NumberRange(1000,4000)])
-    title = SelectField(u'Chess Title', choices=[(' '), ('WCM'), ('WFM'), ('WIM'), ('WGM'), ('CM'), ('FM'), ('IM'), ('GM')], validators=[DataRequired()])
+    title = SelectField(u'Chess Title', choices=[('None'), ('WCM'), ('WFM'), ('WIM'), ('WGM'), ('CM'), ('FM'), ('IM'), ('GM')], validators=[DataRequired()])
 
     submit = SubmitField('Sign Up')
     
 
     def validate_username(self, username):
-        user = User.query.filter_by(username=username.data).first()
+        conn = sqlite3.connect("instance/chessdb.db")
+        curs = conn.cursor()
+        curs.execute("SELECT * FROM user WHERE username = (?)", [username.data])
+        user = curs.fetchone()
+        conn.commit()
+        conn.close()
         if user:
             raise ValidationError('That username is taken. Please choose a different one.')
 
+
     def validate_email(self, email):
-        user = User.query.filter_by(email=email.data).first()
+        conn = sqlite3.connect("instance/chessdb.db")
+        curs = conn.cursor()
+        curs.execute("SELECT * FROM user WHERE email = (?)", [email.data])
+        user = curs.fetchone()
+        conn.commit()
+        conn.close()
         if user:
             raise ValidationError('That email is taken. Please choose a different one.')
 
-    def validate_elo(self, elo):
-        user = User.query.filter_by(elo=elo.data).first()
-    
-    def validate_title(self, title):
-        user = User.query.filter_by(title=title.data).first()
 
 class LoginForm(FlaskForm):
     email = StringField('Email',
@@ -54,36 +61,58 @@ class UpdateAccountForm(FlaskForm):
                         validators=[DataRequired(), Length(min=2, max=20)])
     email = StringField('Email',
                         validators=[DataRequired(), Email()])
-    elo = StringField('Elo',
-                        validators=[DataRequired()])
+    elo = IntegerField('Elo',
+                        validators=[NumberRange(1000,4000)])
 
     title = SelectField(u'Chess Title', 
-    choices=[(' '), ('WCM'), ('WFM'), ('WIM'), ('WGM'), ('CM'), ('FM'), ('IM'), ('GM')], 
+    choices=[('None'), ('WCM'), ('WFM'), ('WIM'), ('WGM'), ('CM'), ('FM'), ('IM'), ('GM')], 
     validators=[DataRequired()])
 
     submit = SubmitField('Update')
 
     def validate_username(self, username):
         if username.data != current_user.username:
-            user = User.query.filter_by(username=username.data).first()
+            conn = sqlite3.connect("instance/chessdb.db")
+            curs = conn.cursor()
+            curs.execute("SELECT * FROM user WHERE username = (?)", [username.data])
+            user = curs.fetchone()
+            conn.commit()
+            conn.close()
             if user:
                 raise ValidationError('That username is taken. Please choose a different one.')
 
     def validate_email(self, email):
         if email.data != current_user.email:
-            user = User.query.filter_by(email=email.data).first()
+            conn = sqlite3.connect("instance/chessdb.db")
+            curs = conn.cursor()
+            curs.execute("SELECT * FROM user WHERE email = (?)", [email.data])
+            user = curs.fetchone()
+            conn.commit()
+            conn.close()
             if user:
                 raise ValidationError('That email is taken. Please choose a different one.')
-    
-    def validate_elo(self, elo):
-        if elo.data != current_user.elo:
-            user = User.query.filter_by(elo=elo.data).first()
-    
-    def validate_elo(self, title):
-        if title.data != current_user.title:
-            user = User.query.filter_by(title=title.data).first()
+
 
 class PlayerForm(FlaskForm):
     player = StringField('Nickname',
                     validators=[DataRequired(), Length(min=3, max=50)])
     submit = SubmitField('Search')
+
+class SelectCountry(FlaskForm):
+    country1 = SelectField('First Country',
+                    validators=[DataRequired(), Length(min=3, max=100)])
+    country2 = SelectField('Second Country',
+                    validators=[DataRequired(), Length(min=3, max=100)])
+
+    submit = SubmitField('Compare Selected Countries')
+
+    def __init__(self):
+        super(SelectCountry, self).__init__()
+        con = sqlite3.connect("instance/rating.db")
+        cur = con.cursor()
+        cur.execute("Select code, name From federation")
+        countries = cur.fetchall()
+        con.commit()
+        con.close()
+        self.country1.choices = [(c[0], c[1]) for c in countries]
+        self.country2.choices = [(c[0], c[1]) for c in countries]

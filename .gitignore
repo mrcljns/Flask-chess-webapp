@@ -1,10 +1,1 @@
-data/gm_list.txt
-data/GM_games.csv
-data/GM_profiles.csv
-data/GM_stats.csv
-data/ratings.txt
-data/rating_ver2.db
-data/chess_openings.csv
-data/query1.sql
-__pycache__/
-chessgames.db
+instance/

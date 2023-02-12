@@ -9,22 +9,24 @@
           <th scope="col">Piece color</th>
           <th scope="col">Result</th>
           <th scope="col">Moves</th>
+          <th scope="col">Elo</th>
           <th scope="col">Link</th>
         </tr>
     </thead>
     <tbody>
         {% for item in data %}
             <tr>
-                <td>{{item.id}}</td>
-                <td>{{item.player}}</td>
-                <td>{{item.piece_color}}</td>
-                <td>{{item.result}}</td>
-                <td>{{item.moves}}</td>
+                <td>{{item[6]}}</td>
+                <td>{{item[1]}}</td>
+                <td>{{item[2]}}</td>
+                <td>{{item[3]}}</td>
+                <td>{{item[4]}}</td>
+                <td>{{item[5]}}</td>
                 <td>
-                    <form method="POST" action="{{ url_for('test') }}">
-                        <input type="hidden" name="view" value="{{item.moves}}">
-                        <input type="hidden" name="color" value="{{item.piece_color}}">
-                        <input onclick="window.location.href = '/test';" type="submit" value="View" />
+                    <form method="POST" action="{{ url_for('game_board') }}">
+                        <input type="hidden" name="view" value="{{item[4]}}">
+                        <input type="hidden" name="color" value="{{item[2]}}">
+                        <input onclick="window.location.href = '/game/board';" type="submit" value="View" />
                     </form>
                 </td>
             </tr>
